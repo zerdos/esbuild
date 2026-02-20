@@ -1189,6 +1189,7 @@ func TestNestedSelector(t *testing.T) {
 	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { &.baz { color: red } }", ".foo .bar.baz {\n  color: red;\n}\n", "")
 	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { & .baz { color: red } }", ".foo .bar .baz {\n  color: red;\n}\n", "")
 	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { & > .baz { color: red } }", ".foo .bar > .baz {\n  color: red;\n}\n", "")
+	expectPrintedLowerUnsupported(t, everything, "a,b,c,d{&>&{&>&{&>&{&>&{color:red}}}}}", "", "<stdin>: WARNING: Transforming this CSS nesting syntax is not supported in the configured target environment\nNOTE: The nesting transform for this case must generate an \":is(...)\" but the configured target environment does not support the \":is\" pseudo-class.\n<stdin>: ERROR: CSS nesting is causing too much expansion\nNOTE: CSS nesting expansion was terminated because a rule was generated with 65536 selectors. This limit exists to prevent esbuild from using too much time and/or memory. Please change your CSS to use fewer levels of nesting.\n<stdin>: WARNING: Transforming this CSS nesting syntax is not supported in the configured target environment\nNOTE: The nesting transform for this case must generate an \":is(...)\" but the configured target environment does not support the \":is\" pseudo-class.\n")
 	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { .baz & { color: red } }", ".baz :is(.foo .bar) {\n  color: red;\n}\n", "") // NOT the same as ".baz .foo .bar
 	expectPrintedLowerUnsupported(t, nesting, ".foo .bar { & .baz & { color: red } }", ".foo .bar .baz :is(.foo .bar) {\n  color: red;\n}\n", "")
 	expectPrintedLowerUnsupported(t, nesting, ".foo, .bar { .baz & { color: red } }", ".baz :is(.foo, .bar) {\n  color: red;\n}\n", "")
@@ -2191,6 +2192,13 @@ func TestMangleCalc(t *testing.T) {
 	expectPrintedMangle(t, "a { b: calc(2 * 3px + 4 * 5px) }", "a {\n  b: 26px;\n}\n", "")
 	expectPrintedMangle(t, "a { b: calc(2px * 3 - 4px * 5) }", "a {\n  b: -14px;\n}\n", "")
 	expectPrintedMangle(t, "a { b: calc(2 * 3px - 4 * 5px) }", "a {\n  b: -14px;\n}\n", "")
+
+	// Test zero elimination logic
+	expectPrintedMangle(t, "a { b: calc(0px + 5px) }", "a {\n  b: 5px;\n}\n", "")
+	expectPrintedMangle(t, "a { b: calc(5px + 0px) }", "a {\n  b: 5px;\n}\n", "")
+	expectPrintedMangle(t, "a { b: calc(0px - 5px) }", "a {\n  b: -5px;\n}\n", "")
+	expectPrintedMangle(t, "a { b: calc(5px - 0px) }", "a {\n  b: 5px;\n}\n", "")
+	expectPrintedMangle(t, "a { b: calc(0px + 0px) }", "a {\n  b: 0px;\n}\n", "")
 
 	// Test negation
 	expectPrintedMangle(t, "a { b: calc(x + 1) }", "a {\n  b: calc(x + 1);\n}\n", "")
